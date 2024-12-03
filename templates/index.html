@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Compressor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .submit-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+        .radio-group {
+            margin-bottom: 15px;
+        }
+        .radio-group label {
+            display: inline;
+            margin-right: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Video Compressor</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="video">Select Video File:</label>
+            <input type="file" id="video" name="video" accept="video/*" required>
+        </div>
+        <div class="radio-group">
+            <label>Compression Mode:</label>
+            <input type="radio" id="quality" name="mode" value="quality" checked>
+            <label for="quality">Quality-based</label>
+            <input type="radio" id="size" name="mode" value="size">
+            <label for="size">Size-based</label>
+        </div>
+        <div class="form-group" id="quality-options">
+            <label>Quality:</label>
+            <select name="quality">
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+            </select>
+        </div>
+        <div class="form-group" id="size-options" style="display: none;">
+            <label for="target_size">Target Size (MB):</label>
+            <input type="number" id="target_size" name="target_size" min="1" step="0.1">
+        </div>
+        <button type="submit" class="submit-btn">Compress Video</button>
+    </form>
+    <script>
+        document.querySelectorAll('input[name="mode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.getElementById('quality-options').style.display = 
+                    this.value === 'quality' ? 'block' : 'none';
+                document.getElementById('size-options').style.display = 
+                    this.value === 'size' ? 'block' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>
