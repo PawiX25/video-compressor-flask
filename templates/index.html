@@ -2,210 +2,143 @@
 <html>
 <head>
     <title>Video Compressor</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        .submit-btn {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .submit-btn:hover {
-            background-color: #45a049;
-        }
-        .radio-group {
-            margin-bottom: 15px;
-        }
-        .radio-group label {
-            display: inline;
-            margin-right: 15px;
-        }
-        .metadata-container {
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .metadata-box {
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 4px;
-            width: 45%;
-        }
-        .metadata-box h3 {
-            margin-top: 0;
-            color: #333;
-        }
-        .metadata-item {
-            margin: 5px 0;
-        }
-        .progress-container {
-            margin: 20px 0;
-            display: none;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background-color: #f0f0f0;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%;
-            background-color: #4CAF50;
-            width: 0%;
-            transition: width 0.5s ease-in-out;
-        }
-        .progress-text {
-            text-align: center;
-            margin-top: 5px;
-        }
-        .error-message {
-            color: #ff0000;
-            margin: 10px 0;
-            padding: 10px;
-            background-color: #ffebee;
-            border: 1px solid #ffcdd2;
-            border-radius: 4px;
-        }
-        .download-btn {
-            background-color: #2196F3;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            margin-top: 10px;
-        }
-        .download-btn:hover {
-            background-color: #1976D2;
-        }
-        .drag-drop-zone {
-            border: 2px dashed #ccc;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            background-color: #f8f9fa;
-            margin-bottom: 15px;
-            transition: all 0.3s ease;
-        }
-        .drag-drop-zone.dragover {
-            background-color: #e3f2fd;
-            border-color: #2196F3;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Video Compressor</h1>
-    
-    {% if error %}
-    <div class="error-message">
-        {{ error }}
-    </div>
-    {% endif %}
-    
-    {% if original_metadata and compressed_metadata %}
-    <div class="metadata-container">
-        <div class="metadata-box">
-            <h3>Original Video</h3>
-            <div class="metadata-item">Resolution: {{ original_metadata.width }}x{{ original_metadata.height }}</div>
-            <div class="metadata-item">Duration: {{ "%.2f"|format(original_metadata.duration) }}s</div>
-            <div class="metadata-item">Size: {{ "%.2f"|format(original_metadata.size_mb) }} MB</div>
-            <div class="metadata-item">Codec: {{ original_metadata.codec }}</div>
-            <div class="metadata-item">Bitrate: {{ "%.2f"|format(original_metadata.bitrate) }} Mbps</div>
-        </div>
-        <div class="metadata-box">
-            <h3>Compressed Video</h3>
-            <div class="metadata-item">Resolution: {{ compressed_metadata.width }}x{{ compressed_metadata.height }}</div>
-            <div class="metadata-item">Duration: {{ "%.2f"|format(compressed_metadata.duration) }}s</div>
-            <div class="metadata-item">Size: {{ "%.2f"|format(compressed_metadata.size_mb) }} MB</div>
-            <div class="metadata-item">Codec: {{ compressed_metadata.codec }}</div>
-            <div class="metadata-item">Bitrate: {{ "%.2f"|format(compressed_metadata.bitrate) }} Mbps</div>
-        </div>
-    </div>
-    {% if download_filename %}
-    <div style="text-align: center; margin-top: 20px;">
-        <a href="{{ url_for('download_file', filename=download_filename) }}" class="download-btn">
-            Download Compressed Video
-        </a>
-    </div>
-    {% endif %}
-    {% endif %}
-
-    <div class="progress-container" id="progressContainer">
-        <div class="progress-bar">
-            <div class="progress-fill" id="progressBar"></div>
-        </div>
-        <div class="progress-text" id="progressText">0%</div>
-        <div class="ffmpeg-output" id="ffmpegOutput" style="margin-top: 10px; font-family: monospace; font-size: 12px; color: #666;"></div>
-    </div>
-
-    <form method="POST" enctype="multipart/form-data" id="uploadForm">
-        <div class="drag-drop-zone" id="dragDropZone">
-            <div>Drag & drop video file here or</div>
-            <div class="form-group">
-                <label for="video">Select Video File:</label>
-                <input type="file" id="video" name="video" accept="video/*" required>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto p-6">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Video Compressor</h1>
+        
+        {% if error %}
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-red-700">{{ error }}</p>
+                </div>
             </div>
         </div>
-        <div class="form-group">
-            <label for="output_format">Output Format:</label>
-            <select name="output_format" id="output_format">
-                <option value="mp4" selected>MP4</option>
-                <option value="avi">AVI</option>
-                <option value="mkv">MKV</option>
-                <option value="mov">MOV</option>
-                <option value="webm">WebM</option>
-            </select>
+        {% endif %}
+        
+        {% if original_metadata and compressed_metadata %}
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Original Video</h3>
+                <div class="space-y-2">
+                    <p class="text-gray-600">Resolution: <span class="text-gray-900">{{ original_metadata.width }}x{{ original_metadata.height }}</span></p>
+                    <p class="text-gray-600">Duration: <span class="text-gray-900">{{ "%.2f"|format(original_metadata.duration) }}s</span></p>
+                    <p class="text-gray-600">Size: <span class="text-gray-900">{{ "%.2f"|format(original_metadata.size_mb) }} MB</span></p>
+                    <p class="text-gray-600">Codec: <span class="text-gray-900">{{ original_metadata.codec }}</span></p>
+                    <p class="text-gray-600">Bitrate: <span class="text-gray-900">{{ "%.2f"|format(original_metadata.bitrate) }} Mbps</span></p>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Compressed Video</h3>
+                <div class="space-y-2">
+                    <p class="text-gray-600">Resolution: <span class="text-gray-900">{{ compressed_metadata.width }}x{{ compressed_metadata.height }}</span></p>
+                    <p class="text-gray-600">Duration: <span class="text-gray-900">{{ "%.2f"|format(compressed_metadata.duration) }}s</span></p>
+                    <p class="text-gray-600">Size: <span class="text-gray-900">{{ "%.2f"|format(compressed_metadata.size_mb) }} MB</span></p>
+                    <p class="text-gray-600">Codec: <span class="text-gray-900">{{ compressed_metadata.codec }}</span></p>
+                    <p class="text-gray-600">Bitrate: <span class="text-gray-900">{{ "%.2f"|format(compressed_metadata.bitrate) }} Mbps</span></p>
+                </div>
+            </div>
         </div>
-        <div class="form-group">
-            <label for="resolution">Resolution:</label>
-            <select name="resolution" id="resolution">
-                <option value="">Original Resolution</option>
-                <option value="4K">4K (3840x2160)</option>
-                <option value="1440p">1440p (2560x1440)</option>
-                <option value="1080p">1080p (1920x1080)</option>
-                <option value="720p">720p (1280x720)</option>
-                <option value="480p">480p (854x480)</option>
-                <option value="360p">360p (640x360)</option>
-            </select>
+        {% if download_filename %}
+        <div class="text-center">
+            <a href="{{ url_for('download_file', filename=download_filename) }}" 
+               class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                Download Compressed Video
+            </a>
         </div>
-        <div class="radio-group">
-            <label>Compression Mode:</label>
-            <input type="radio" id="quality" name="mode" value="quality" checked>
-            <label for="quality">Quality-based</label>
-            <input type="radio" id="size" name="mode" value="size">
-            <label for="size">Size-based</label>
+        {% endif %}
+        {% endif %}
+
+        <div id="progressContainer" class="hidden space-y-4 mb-8">
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div id="progressText" class="text-center text-sm text-gray-600">0%</div>
+            <div id="ffmpegOutput" class="font-mono text-xs text-gray-500 bg-gray-50 p-2 rounded"></div>
         </div>
-        <div class="form-group" id="quality-options">
-            <label>Quality:</label>
-            <select name="quality">
-                <option value="high">High</option>
-                <option value="medium" selected>Medium</option>
-                <option value="low">Low</option>
-            </select>
-        </div>
-        <div class="form-group" id="size-options" style="display: none;">
-            <label for="target_size">Target Size (MB):</label>
-            <input type="number" id="target_size" name="target_size" min="1" step="0.1">
-        </div>
-        <button type="submit" class="submit-btn">Compress Video</button>
-    </form>
+
+        <form method="POST" enctype="multipart/form-data" id="uploadForm" class="space-y-6">
+            <div id="dragDropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors duration-200 hover:border-indigo-500">
+                <div class="space-y-2">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <div class="text-gray-600">Drag & drop video file here or</div>
+                    <input type="file" id="video" name="video" accept="video/*" required
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">Output Format</label>
+                    <select name="output_format" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                        <option value="mp4">MP4</option>
+                        <option value="avi">AVI</option>
+                        <option value="mkv">MKV</option>
+                        <option value="mov">MOV</option>
+                        <option value="webm">WebM</option>
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">Resolution</label>
+                    <select name="resolution" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                        <option value="">Original Resolution</option>
+                        <option value="4K">4K (3840x2160)</option>
+                        <option value="1440p">1440p (2560x1440)</option>
+                        <option value="1080p">1080p (1920x1080)</option>
+                        <option value="720p">720p (1280x720)</option>
+                        <option value="480p">480p (854x480)</option>
+                        <option value="360p">360p (640x360)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <label class="block text-sm font-medium text-gray-700">Compression Mode</label>
+                <div class="flex space-x-4">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="mode" value="quality" checked class="form-radio text-indigo-600">
+                        <span class="ml-2">Quality-based</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="mode" value="size" class="form-radio text-indigo-600">
+                        <span class="ml-2">Size-based</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="quality-options" class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700">Quality</label>
+                <select name="quality" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                    <option value="high">High</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="low">Low</option>
+                </select>
+            </div>
+
+            <div id="size-options" class="hidden space-y-2">
+                <label class="block text-sm font-medium text-gray-700">Target Size (MB)</label>
+                <input type="number" name="target_size" min="1" step="0.1"
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                Compress Video
+            </button>
+        </form>
+    </div>
+
     <script>
         const originalTitle = document.title;
 
