@@ -95,6 +95,19 @@
         .download-btn:hover {
             background-color: #1976D2;
         }
+        .drag-drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            background-color: #f8f9fa;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .drag-drop-zone.dragover {
+            background-color: #e3f2fd;
+            border-color: #2196F3;
+        }
     </style>
 </head>
 <body>
@@ -143,9 +156,12 @@
     </div>
 
     <form method="POST" enctype="multipart/form-data" id="uploadForm">
-        <div class="form-group">
-            <label for="video">Select Video File:</label>
-            <input type="file" id="video" name="video" accept="video/*" required>
+        <div class="drag-drop-zone" id="dragDropZone">
+            <div>Drag & drop video file here or</div>
+            <div class="form-group">
+                <label for="video">Select Video File:</label>
+                <input type="file" id="video" name="video" accept="video/*" required>
+            </div>
         </div>
         <div class="form-group">
             <label for="output_format">Output Format:</label>
@@ -226,6 +242,46 @@
                 alert('Error: ' + error);
             });
         };
+
+        const dragDropZone = document.getElementById('dragDropZone');
+        const fileInput = document.getElementById('video');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dragDropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dragDropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dragDropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dragDropZone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dragDropZone.classList.remove('dragover');
+        }
+
+        dragDropZone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const file = dt.files[0];
+            
+            if (file && file.type.startsWith('video/')) {
+                fileInput.files = dt.files;
+
+            }
+        }
 
         function updateProgress() {
             fetch('/progress')
