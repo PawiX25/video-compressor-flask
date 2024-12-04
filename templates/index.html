@@ -191,6 +191,8 @@
         <button type="submit" class="submit-btn">Compress Video</button>
     </form>
     <script>
+        const originalTitle = document.title;
+
         document.querySelectorAll('input[name="mode"]').forEach(radio => {
             radio.addEventListener('change', function() {
                 document.getElementById('quality-options').style.display = 
@@ -236,6 +238,9 @@
                     progressBar.style.width = data.progress + '%';
                     progressText.textContent = data.progress + '%';
                     ffmpegOutput.textContent = data.current_line;
+                    
+                    document.title = data.processing ? 
+                        `(${data.progress}%) Video Compressor` : originalTitle;
                     
                     if (!data.processing && data.progress === 100) {
                         clearInterval(progressInterval);
