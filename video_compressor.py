@@ -14,6 +14,7 @@ class VideoCompressor:
         }
         self.progress = 0
         self.processing = False
+        self.current_line = ""
     
     def get_video_size_mb(self, filepath):
         return os.path.getsize(filepath) / (1024 * 1024)
@@ -40,6 +41,7 @@ class VideoCompressor:
                 while process.poll() is None:
                     line = process.stderr.readline()
                     if line:
+                        self.current_line = line.strip()
                         time_match = re.search(r"time=(\d{2}):(\d{2}):(\d{2})\.", line)
                         if time_match:
                             hours, minutes, seconds = map(int, time_match.groups())
@@ -99,5 +101,6 @@ class VideoCompressor:
     def get_progress(self):
         return {
             'progress': self.progress,
-            'processing': self.processing
+            'processing': self.processing,
+            'current_line': self.current_line
         }

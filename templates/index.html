@@ -104,6 +104,7 @@
             <div class="progress-fill" id="progressBar"></div>
         </div>
         <div class="progress-text" id="progressText">0%</div>
+        <div class="ffmpeg-output" id="ffmpegOutput" style="margin-top: 10px; font-family: monospace; font-size: 12px; color: #666;"></div>
     </div>
 
     <form method="POST" enctype="multipart/form-data" id="uploadForm">
@@ -173,8 +174,11 @@
                 .then(data => {
                     const progressBar = document.getElementById('progressBar');
                     const progressText = document.getElementById('progressText');
+                    const ffmpegOutput = document.getElementById('ffmpegOutput');
+                    
                     progressBar.style.width = data.progress + '%';
                     progressText.textContent = data.progress + '%';
+                    ffmpegOutput.textContent = data.current_line;
                     
                     if (!data.processing && data.progress === 100) {
                         clearInterval(progressInterval);
