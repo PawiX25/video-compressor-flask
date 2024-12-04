@@ -25,11 +25,13 @@ def index():
         input_path = os.path.join(app.config['UPLOAD_FOLDER'], video.filename)
         video.save(input_path)
         
-        # Compress video
+        # Get video metadata
         compressor = VideoCompressor()
-        output_path = os.path.join(app.config['OUTPUT_FOLDER'], f'compressed_{video.filename}')
+        metadata = compressor.get_video_metadata(input_path)
         
         compression_mode = request.form.get('mode', 'quality')
+        output_path = os.path.join(app.config['OUTPUT_FOLDER'], f'compressed_{video.filename}')
+        
         if compression_mode == 'size':
             target_size_mb = float(request.form['target_size'])
             result = compressor.compress_video(input_path, output_path, target_size_mb=target_size_mb)
@@ -37,11 +39,16 @@ def index():
             quality = request.form.get('quality', 'medium')
             result = compressor.compress_video(input_path, output_path, quality=quality)
         
-        # Clean up input file
-        os.remove(input_path)
-        
         if result:
-            return send_file(output_path, as_attachment=True)
+            compressed_metadata = compressor.get_video_metadata(output_path)
+            return render_template('index.html', 
+                                original_metadata=metadata, 
+                                compressed_metadata=compressed_metadata)
+        
+        # Clean up files
+        os.remove(input_path)
+        if os.path.exists(output_path):
+            os.remove(output_path)
         return 'Compression failed', 400
     
     return render_template('index.html')

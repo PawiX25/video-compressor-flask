@@ -36,3 +36,19 @@ class VideoCompressor:
                     return True
                 os.remove(output_path)
         return False
+
+    def get_video_metadata(self, filepath):
+        try:
+            probe = ffmpeg.probe(filepath)
+            video_info = next(s for s in probe['streams'] if s['codec_type'] == 'video')
+            
+            return {
+                'duration': float(probe['format'].get('duration', 0)),
+                'size_mb': self.get_video_size_mb(filepath),
+                'width': int(video_info.get('width', 0)),
+                'height': int(video_info.get('height', 0)),
+                'codec': video_info.get('codec_name', 'unknown'),
+                'bitrate': float(probe['format'].get('bit_rate', 0)) / 1000000  # Convert to Mbps
+            }
+        except (ffmpeg.Error, KeyError, StopIteration):
+            return None

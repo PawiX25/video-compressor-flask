@@ -34,10 +34,50 @@
             display: inline;
             margin-right: 15px;
         }
+        .metadata-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .metadata-box {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            width: 45%;
+        }
+        .metadata-box h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .metadata-item {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
     <h1>Video Compressor</h1>
+    
+    {% if original_metadata and compressed_metadata %}
+    <div class="metadata-container">
+        <div class="metadata-box">
+            <h3>Original Video</h3>
+            <div class="metadata-item">Resolution: {{ original_metadata.width }}x{{ original_metadata.height }}</div>
+            <div class="metadata-item">Duration: {{ "%.2f"|format(original_metadata.duration) }}s</div>
+            <div class="metadata-item">Size: {{ "%.2f"|format(original_metadata.size_mb) }} MB</div>
+            <div class="metadata-item">Codec: {{ original_metadata.codec }}</div>
+            <div class="metadata-item">Bitrate: {{ "%.2f"|format(original_metadata.bitrate) }} Mbps</div>
+        </div>
+        <div class="metadata-box">
+            <h3>Compressed Video</h3>
+            <div class="metadata-item">Resolution: {{ compressed_metadata.width }}x{{ compressed_metadata.height }}</div>
+            <div class="metadata-item">Duration: {{ "%.2f"|format(compressed_metadata.duration) }}s</div>
+            <div class="metadata-item">Size: {{ "%.2f"|format(compressed_metadata.size_mb) }} MB</div>
+            <div class="metadata-item">Codec: {{ compressed_metadata.codec }}</div>
+            <div class="metadata-item">Bitrate: {{ "%.2f"|format(compressed_metadata.bitrate) }} Mbps</div>
+        </div>
+    </div>
+    {% endif %}
+
     <form method="POST" enctype="multipart/form-data">
         <div class="form-group">
             <label for="video">Select Video File:</label>
