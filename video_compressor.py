@@ -17,11 +17,19 @@ class VideoCompressor:
         self.processing = False
         self.current_line = ""
         self.error_message = ""
+        self.resolution_presets = {
+            '4K': '3840x2160',
+            '1440p': '2560x1440',
+            '1080p': '1920x1080',
+            '720p': '1280x720',
+            '480p': '854x480',
+            '360p': '640x360'
+        }
     
     def get_video_size_mb(self, filepath):
         return os.path.getsize(filepath) / (1024 * 1024)
     
-    def _do_compress(self, input_path, output_path, crf, output_format='mp4'):
+    def _do_compress(self, input_path, output_path, crf, output_format='mp4', resolution=None):
         try:
             probe = ffmpeg.probe(input_path)
             duration = float(probe['format']['duration'])
@@ -29,16 +37,19 @@ class VideoCompressor:
             self.progress = 0
             self.processing = True
 
-            cmd = (
-                ffmpeg
-                .input(input_path)
+            stream = ffmpeg.input(input_path)
+            if resolution:
+                width, height = map(int, resolution.split('x'))
+                stream = stream.filter('scale', width, height)
+                
+            stream = (stream
                 .output(output_path, 
                        vcodec='libx264' if output_format != 'webm' else 'libvpx-vp9',
                        crf=crf, 
                        acodec='aac' if output_format != 'webm' else 'libvorbis')
-                .overwrite_output()
-                .compile()
-            )
+                .overwrite_output())
+                
+            cmd = stream.compile()
 
             process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
 
@@ -71,7 +82,13 @@ class VideoCompressor:
             self.processing = False
             return False
     
-    def compress_video(self, input_path, output_path, quality='medium', target_size_mb=None, output_format='mp4'):
+    def compress_video(self, input_path, output_path, quality='medium', target_size_mb=None, output_format='mp4', resolution_preset=None):
+        if resolution_preset and resolution_preset not in self.resolution_presets:
+            self.error_message = "Invalid resolution preset"
+            return False
+            
+        resolution = self.resolution_presets.get(resolution_preset) if resolution_preset else None
+        
         if not os.path.exists(input_path):
             self.error_message = "Input file does not exist"
             return False
@@ -90,17 +107,17 @@ class VideoCompressor:
             
         try:
             if target_size_mb is not None:
-                return self.compress_to_target_size(input_path, output_path, target_size_mb, output_format)
+                return self.compress_to_target_size(input_path, output_path, target_size_mb, output_format, resolution)
             else:
                 crf = self.quality_presets[quality]
-                return self._do_compress(input_path, output_path, crf, output_format)
+                return self._do_compress(input_path, output_path, crf, output_format, resolution)
         except Exception as e:
             self.error_message = str(e)
             return False
     
-    def compress_to_target_size(self, input_path, output_path, target_size_mb, output_format='mp4'):
+    def compress_to_target_size(self, input_path, output_path, target_size_mb, output_format='mp4', resolution=None):
         for crf in range(23, 41, 3):
-            if self._do_compress(input_path, output_path, crf, output_format):
+            if self._do_compress(input_path, output_path, crf, output_format, resolution):
                 compressed_size = self.get_video_size_mb(output_path)
                 if compressed_size <= target_size_mb:
                     return True

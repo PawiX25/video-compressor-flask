@@ -61,6 +61,7 @@ def index():
                 raise ValueError("Invalid video file")
                 
             compression_mode = request.form.get('mode', 'quality')
+            resolution_preset = request.form.get('resolution', '')
             
             if compression_mode == 'size':
                 try:
@@ -72,12 +73,14 @@ def index():
                     
                 result = compressor.compress_video(input_path, output_path, 
                                                 target_size_mb=target_size_mb,
-                                                output_format=output_format)
+                                                output_format=output_format,
+                                                resolution_preset=resolution_preset)
             else:
                 quality = request.form.get('quality', 'medium')
                 result = compressor.compress_video(input_path, output_path, 
                                                 quality=quality,
-                                                output_format=output_format)
+                                                output_format=output_format,
+                                                resolution_preset=resolution_preset)
             
             if result:
                 compressed_metadata = compressor.get_video_metadata(output_path)
