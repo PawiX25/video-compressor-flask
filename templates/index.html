@@ -52,6 +52,27 @@
         .metadata-item {
             margin: 5px 0;
         }
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+        .progress-text {
+            text-align: center;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -78,7 +99,14 @@
     </div>
     {% endif %}
 
-    <form method="POST" enctype="multipart/form-data">
+    <div class="progress-container" id="progressContainer">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar"></div>
+        </div>
+        <div class="progress-text" id="progressText">0%</div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="uploadForm">
         <div class="form-group">
             <label for="video">Select Video File:</label>
             <input type="file" id="video" name="video" accept="video/*" required>
@@ -113,6 +141,46 @@
                     this.value === 'size' ? 'block' : 'none';
             });
         });
+
+        let progressInterval;
+
+        document.getElementById('uploadForm').onsubmit = function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            document.getElementById('progressContainer').style.display = 'block';
+            
+            progressInterval = setInterval(updateProgress, 1000);
+
+            fetch('/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(html => {
+                clearInterval(progressInterval);
+                document.documentElement.innerHTML = html;
+            })
+            .catch(error => {
+                clearInterval(progressInterval);
+                alert('Error: ' + error);
+            });
+        };
+
+        function updateProgress() {
+            fetch('/progress')
+                .then(response => response.json())
+                .then(data => {
+                    const progressBar = document.getElementById('progressBar');
+                    const progressText = document.getElementById('progressText');
+                    progressBar.style.width = data.progress + '%';
+                    progressText.textContent = data.progress + '%';
+                    
+                    if (!data.processing && data.progress === 100) {
+                        clearInterval(progressInterval);
+                    }
+                });
+        }
     </script>
 </body>
 </html>

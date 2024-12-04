@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, jsonify
 import os
 from video_compressor import VideoCompressor
 
@@ -10,6 +10,12 @@ app.config['OUTPUT_FOLDER'] = 'compressed'
 # Ensure upload and output directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
+
+compressor = VideoCompressor()
+
+@app.route('/progress')
+def progress():
+    return jsonify(compressor.get_progress())
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -26,7 +32,6 @@ def index():
         video.save(input_path)
         
         # Get video metadata
-        compressor = VideoCompressor()
         metadata = compressor.get_video_metadata(input_path)
         
         compression_mode = request.form.get('mode', 'quality')

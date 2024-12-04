@@ -1,5 +1,9 @@
 import ffmpeg
 import os
+import time
+import re
+import threading
+from subprocess import Popen, PIPE
 
 class VideoCompressor:
     def __init__(self):
@@ -8,17 +12,56 @@ class VideoCompressor:
             'medium': 28,
             'low': 33
         }
+        self.progress = 0
+        self.processing = False
     
     def get_video_size_mb(self, filepath):
         return os.path.getsize(filepath) / (1024 * 1024)
     
     def _do_compress(self, input_path, output_path, crf):
         try:
-            stream = ffmpeg.input(input_path)
-            stream = ffmpeg.output(stream, output_path, vcodec='libx264', crf=crf, acodec='aac')
-            ffmpeg.run(stream, overwrite_output=True, capture_stdout=True, capture_stderr=True)
-            return True
-        except ffmpeg.Error:
+            probe = ffmpeg.probe(input_path)
+            duration = float(probe['format']['duration'])
+            
+            self.progress = 0
+            self.processing = True
+
+            cmd = (
+                ffmpeg
+                .input(input_path)
+                .output(output_path, vcodec='libx264', crf=crf, acodec='aac')
+                .overwrite_output()
+                .compile()
+            )
+
+            process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+
+            def read_output():
+                while process.poll() is None:
+                    line = process.stderr.readline()
+                    if line:
+                        time_match = re.search(r"time=(\d{2}):(\d{2}):(\d{2})\.", line)
+                        if time_match:
+                            hours, minutes, seconds = map(int, time_match.groups())
+                            current_time = hours * 3600 + minutes * 60 + seconds
+                            self.progress = min(99, int(current_time / float(duration) * 100))
+                            
+            thread = threading.Thread(target=read_output)
+            thread.daemon = True
+            thread.start()
+
+            process.wait()
+            
+            if process.returncode == 0:
+                self.progress = 100
+                self.processing = False
+                return True
+            else:
+                self.processing = False
+                return False
+
+        except (ffmpeg.Error, ValueError) as e:
+            self.processing = False
             return False
     
     def compress_video(self, input_path, output_path, quality='medium', target_size_mb=None):
@@ -52,3 +95,9 @@ class VideoCompressor:
             }
         except (ffmpeg.Error, KeyError, StopIteration):
             return None
+
+    def get_progress(self):
+        return {
+            'progress': self.progress,
+            'processing': self.processing
+        }
