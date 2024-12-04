@@ -1,11 +1,18 @@
 from flask import Flask, render_template, request, send_file, jsonify
 import os
 from video_compressor import VideoCompressor
+from werkzeug.utils import secure_filename
+import mimetypes
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'compressed'
+
+ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'flv', 'wmv'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Ensure upload and output directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -17,44 +24,68 @@ compressor = VideoCompressor()
 def progress():
     return jsonify(compressor.get_progress())
 
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_file(
+        os.path.join(app.config['OUTPUT_FOLDER'], filename),
+        as_attachment=True
+    )
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         if 'video' not in request.files:
-            return 'No video file uploaded', 400
+            return render_template('index.html', error='No video file uploaded')
         
         video = request.files['video']
         if video.filename == '':
-            return 'No selected file', 400
+            return render_template('index.html', error='No selected file')
+            
+        if not allowed_file(video.filename):
+            return render_template('index.html', error='Invalid file type')
 
-        # Save uploaded file
-        input_path = os.path.join(app.config['UPLOAD_FOLDER'], video.filename)
-        video.save(input_path)
+        # Secure the filename
+        filename = secure_filename(video.filename)
+        input_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        output_path = os.path.join(app.config['OUTPUT_FOLDER'], f'compressed_{filename}')
         
-        # Get video metadata
-        metadata = compressor.get_video_metadata(input_path)
-        
-        compression_mode = request.form.get('mode', 'quality')
-        output_path = os.path.join(app.config['OUTPUT_FOLDER'], f'compressed_{video.filename}')
-        
-        if compression_mode == 'size':
-            target_size_mb = float(request.form['target_size'])
-            result = compressor.compress_video(input_path, output_path, target_size_mb=target_size_mb)
-        else:
-            quality = request.form.get('quality', 'medium')
-            result = compressor.compress_video(input_path, output_path, quality=quality)
-        
-        if result:
-            compressed_metadata = compressor.get_video_metadata(output_path)
-            return render_template('index.html', 
-                                original_metadata=metadata, 
-                                compressed_metadata=compressed_metadata)
-        
-        # Clean up files
-        os.remove(input_path)
-        if os.path.exists(output_path):
-            os.remove(output_path)
-        return 'Compression failed', 400
+        try:
+            video.save(input_path)
+            metadata = compressor.get_video_metadata(input_path)
+            
+            if metadata is None:
+                raise ValueError("Invalid video file")
+                
+            compression_mode = request.form.get('mode', 'quality')
+            
+            if compression_mode == 'size':
+                try:
+                    target_size_mb = float(request.form['target_size'])
+                    if target_size_mb <= 0:
+                        raise ValueError()
+                except (ValueError, KeyError):
+                    return render_template('index.html', error='Invalid target size')
+                    
+                result = compressor.compress_video(input_path, output_path, target_size_mb=target_size_mb)
+            else:
+                quality = request.form.get('quality', 'medium')
+                result = compressor.compress_video(input_path, output_path, quality=quality)
+            
+            if result:
+                compressed_metadata = compressor.get_video_metadata(output_path)
+                return render_template('index.html',
+                                    original_metadata=metadata,
+                                    compressed_metadata=compressed_metadata,
+                                    download_filename=f'compressed_{filename}')
+            
+            return render_template('index.html', error='Compression failed')
+            
+        except Exception as e:
+            return render_template('index.html', error=str(e))
+        finally:
+            # Cleanup input file
+            if os.path.exists(input_path):
+                os.remove(input_path)
     
     return render_template('index.html')
 

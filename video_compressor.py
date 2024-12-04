@@ -15,6 +15,7 @@ class VideoCompressor:
         self.progress = 0
         self.processing = False
         self.current_line = ""
+        self.error_message = ""
     
     def get_video_size_mb(self, filepath):
         return os.path.getsize(filepath) / (1024 * 1024)
@@ -67,11 +68,27 @@ class VideoCompressor:
             return False
     
     def compress_video(self, input_path, output_path, quality='medium', target_size_mb=None):
-        if target_size_mb:
-            return self.compress_to_target_size(input_path, output_path, target_size_mb)
-        
-        crf = self.quality_presets[quality]
-        return self._do_compress(input_path, output_path, crf)
+        if not os.path.exists(input_path):
+            self.error_message = "Input file does not exist"
+            return False
+            
+        if quality not in self.quality_presets and target_size_mb is None:
+            self.error_message = "Invalid quality preset"
+            return False
+            
+        if target_size_mb is not None and target_size_mb <= 0:
+            self.error_message = "Invalid target size"
+            return False
+            
+        try:
+            if target_size_mb is not None:
+                return self.compress_to_target_size(input_path, output_path, target_size_mb)
+            else:
+                crf = self.quality_presets[quality]
+                return self._do_compress(input_path, output_path, crf)
+        except Exception as e:
+            self.error_message = str(e)
+            return False
     
     def compress_to_target_size(self, input_path, output_path, target_size_mb):
         for crf in range(23, 41, 3):
@@ -102,5 +119,6 @@ class VideoCompressor:
         return {
             'progress': self.progress,
             'processing': self.processing,
-            'current_line': self.current_line
+            'current_line': self.current_line,
+            'error': self.error_message
         }
