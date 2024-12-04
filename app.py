@@ -3,16 +3,32 @@ import os
 from video_compressor import VideoCompressor
 from werkzeug.utils import secure_filename
 import mimetypes
+import time
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'compressed'
+app.config['MAX_FILE_AGE'] = 3600
 
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'flv', 'wmv'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def cleanup_old_files():
+    current_time = time.time()
+    for folder in [app.config['UPLOAD_FOLDER'], app.config['OUTPUT_FOLDER']]:
+        for filename in os.listdir(folder):
+            filepath = os.path.join(folder, filename)
+            if os.path.isfile(filepath):
+                file_age = current_time - os.path.getmtime(filepath)
+                if file_age > app.config['MAX_FILE_AGE']:
+                    try:
+                        os.remove(filepath)
+                    except OSError:
+                        pass
 
 # Ensure upload and output directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -22,10 +38,12 @@ compressor = VideoCompressor()
 
 @app.route('/progress')
 def progress():
+    cleanup_old_files()
     return jsonify(compressor.get_progress())
 
 @app.route('/download/<filename>')
 def download_file(filename):
+    cleanup_old_files()
     return send_file(
         os.path.join(app.config['OUTPUT_FOLDER'], filename),
         as_attachment=True
@@ -33,6 +51,8 @@ def download_file(filename):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    cleanup_old_files()
+    
     if request.method == 'POST':
         if 'video' not in request.files:
             return render_template('index.html', error='No video file uploaded')
