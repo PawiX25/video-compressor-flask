@@ -44,10 +44,14 @@ def index():
         if not allowed_file(video.filename):
             return render_template('index.html', error='Invalid file type')
 
-        # Secure the filename
-        filename = secure_filename(video.filename)
-        input_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        output_path = os.path.join(app.config['OUTPUT_FOLDER'], f'compressed_{filename}')
+        # Secure the filename and handle output format
+        base_filename = secure_filename(video.filename)
+        output_format = request.form.get('output_format', 'mp4')
+        filename_without_ext = os.path.splitext(base_filename)[0]
+        
+        input_path = os.path.join(app.config['UPLOAD_FOLDER'], base_filename)
+        output_path = os.path.join(app.config['OUTPUT_FOLDER'], 
+                                 f'compressed_{filename_without_ext}.{output_format}')
         
         try:
             video.save(input_path)
@@ -66,17 +70,21 @@ def index():
                 except (ValueError, KeyError):
                     return render_template('index.html', error='Invalid target size')
                     
-                result = compressor.compress_video(input_path, output_path, target_size_mb=target_size_mb)
+                result = compressor.compress_video(input_path, output_path, 
+                                                target_size_mb=target_size_mb,
+                                                output_format=output_format)
             else:
                 quality = request.form.get('quality', 'medium')
-                result = compressor.compress_video(input_path, output_path, quality=quality)
+                result = compressor.compress_video(input_path, output_path, 
+                                                quality=quality,
+                                                output_format=output_format)
             
             if result:
                 compressed_metadata = compressor.get_video_metadata(output_path)
                 return render_template('index.html',
                                     original_metadata=metadata,
                                     compressed_metadata=compressed_metadata,
-                                    download_filename=f'compressed_{filename}')
+                                    download_filename=f'compressed_{filename_without_ext}.{output_format}')
             
             return render_template('index.html', error='Compression failed')
             

@@ -12,6 +12,7 @@ class VideoCompressor:
             'medium': 28,
             'low': 33
         }
+        self.supported_formats = ['mp4', 'avi', 'mkv', 'mov', 'webm']
         self.progress = 0
         self.processing = False
         self.current_line = ""
@@ -20,7 +21,7 @@ class VideoCompressor:
     def get_video_size_mb(self, filepath):
         return os.path.getsize(filepath) / (1024 * 1024)
     
-    def _do_compress(self, input_path, output_path, crf):
+    def _do_compress(self, input_path, output_path, crf, output_format='mp4'):
         try:
             probe = ffmpeg.probe(input_path)
             duration = float(probe['format']['duration'])
@@ -31,7 +32,10 @@ class VideoCompressor:
             cmd = (
                 ffmpeg
                 .input(input_path)
-                .output(output_path, vcodec='libx264', crf=crf, acodec='aac')
+                .output(output_path, 
+                       vcodec='libx264' if output_format != 'webm' else 'libvpx-vp9',
+                       crf=crf, 
+                       acodec='aac' if output_format != 'webm' else 'libvorbis')
                 .overwrite_output()
                 .compile()
             )
@@ -67,7 +71,7 @@ class VideoCompressor:
             self.processing = False
             return False
     
-    def compress_video(self, input_path, output_path, quality='medium', target_size_mb=None):
+    def compress_video(self, input_path, output_path, quality='medium', target_size_mb=None, output_format='mp4'):
         if not os.path.exists(input_path):
             self.error_message = "Input file does not exist"
             return False
@@ -80,19 +84,23 @@ class VideoCompressor:
             self.error_message = "Invalid target size"
             return False
             
+        if output_format not in self.supported_formats:
+            self.error_message = "Unsupported output format"
+            return False
+            
         try:
             if target_size_mb is not None:
-                return self.compress_to_target_size(input_path, output_path, target_size_mb)
+                return self.compress_to_target_size(input_path, output_path, target_size_mb, output_format)
             else:
                 crf = self.quality_presets[quality]
-                return self._do_compress(input_path, output_path, crf)
+                return self._do_compress(input_path, output_path, crf, output_format)
         except Exception as e:
             self.error_message = str(e)
             return False
     
-    def compress_to_target_size(self, input_path, output_path, target_size_mb):
+    def compress_to_target_size(self, input_path, output_path, target_size_mb, output_format='mp4'):
         for crf in range(23, 41, 3):
-            if self._do_compress(input_path, output_path, crf):
+            if self._do_compress(input_path, output_path, crf, output_format):
                 compressed_size = self.get_video_size_mb(output_path)
                 if compressed_size <= target_size_mb:
                     return True
