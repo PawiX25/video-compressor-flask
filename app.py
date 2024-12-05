@@ -49,6 +49,21 @@ def download_file(filename):
         as_attachment=True
     )
 
+@app.route('/video/<filename>')
+def get_video(filename):
+    if os.path.exists(os.path.join(app.config['OUTPUT_FOLDER'], filename)):
+        return send_file(
+            os.path.join(app.config['OUTPUT_FOLDER'], filename),
+            mimetype=mimetypes.guess_type(filename)[0]
+        )
+    elif os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
+        return send_file(
+            os.path.join(app.config['UPLOAD_FOLDER'], filename),
+            mimetype=mimetypes.guess_type(filename)[0]
+        )
+    else:
+        return "File not found", 404
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     cleanup_old_files()
@@ -107,18 +122,25 @@ def index():
                 return render_template('index.html',
                                     original_metadata=metadata,
                                     compressed_metadata=compressed_metadata,
+                                    input_filename=base_filename,
                                     download_filename=f'compressed_{filename_without_ext}.{output_format}')
             
             return render_template('index.html', error='Compression failed')
             
         except Exception as e:
-            return render_template('index.html', error=str(e))
-        finally:
-            # Cleanup input file
+            # Clean up input file only on error
             if os.path.exists(input_path):
                 os.remove(input_path)
+            return render_template('index.html', error=str(e))
     
     return render_template('index.html')
+
+def cleanup_file(filepath):
+    try:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+    except OSError:
+        pass
 
 if __name__ == '__main__':
     app.run(debug=True)
