@@ -1,87 +1,136 @@
 <!DOCTYPE html>
-<html>
+<html class="dark">
 <head>
     <title>Video Compressor</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="max-w-4xl mx-auto p-6">
-        <h1 class="text-3xl font-bold text-gray-900 mb-8">Video Compressor</h1>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-screen text-gray-800 dark:text-gray-200 transition-colors duration-200">
+    <div class="max-w-5xl mx-auto p-6">
+        <div class="absolute top-4 right-4">
+            <button id="themeToggle" class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                <svg class="w-6 h-6 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+                </svg>
+                <svg class="w-6 h-6 dark:hidden" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                </svg>
+            </button>
+        </div>
+
+        
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Video Compressor
+            </h1>
+            <p class="mt-2 text-gray-600 dark:text-gray-400">Compress your videos while maintaining quality</p>
+        </div>
+
         
         {% if error %}
-        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm text-red-700">{{ error }}</p>
-                </div>
+        <div class="bg-red-100 dark:bg-red-900/50 border-l-4 border-red-500 p-4 mb-8 rounded-r-lg">
+            <div class="flex items-center">
+                <svg class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="ml-3 text-red-700 dark:text-red-400">{{ error }}</p>
             </div>
         </div>
         {% endif %}
+
         
         {% if original_metadata and compressed_metadata %}
-        <div class="grid md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Original Video</h3>
-                <div class="space-y-2">
-                    <p class="text-gray-600">Resolution: <span class="text-gray-900">{{ original_metadata.width }}x{{ original_metadata.height }}</span></p>
-                    <p class="text-gray-600">Duration: <span class="text-gray-900">{{ "%.2f"|format(original_metadata.duration) }}s</span></p>
-                    <p class="text-gray-600">Size: <span class="text-gray-900">{{ "%.2f"|format(original_metadata.size_mb) }} MB</span></p>
-                    <p class="text-gray-600">Codec: <span class="text-gray-900">{{ original_metadata.codec }}</span></p>
-                    <p class="text-gray-600">Bitrate: <span class="text-gray-900">{{ "%.2f"|format(original_metadata.bitrate) }} Mbps</span></p>
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
+            
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform transition-all hover:scale-102">
+                <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
+                    <h3 class="text-lg font-semibold text-white">Original Video</h3>
+                </div>
+                <div class="p-6 space-y-3">
+                    <p class="text-gray-600 dark:text-gray-400">Resolution: <span class="text-gray-900 dark:text-gray-100">{{ original_metadata.width }}x{{ original_metadata.height }}</span></p>
+                    <p class="text-gray-600 dark:text-gray-400">Duration: <span class="text-gray-900 dark:text-gray-100">{{ "%.2f"|format(original_metadata.duration) }}s</span></p>
+                    <p class="text-gray-600 dark:text-gray-400">Size: <span class="text-gray-900 dark:text-gray-100">{{ "%.2f"|format(original_metadata.size_mb) }} MB</span></p>
+                    <p class="text-gray-600 dark:text-gray-400">Codec: <span class="text-gray-900 dark:text-gray-100">{{ original_metadata.codec }}</span></p>
+                    <p class="text-gray-600 dark:text-gray-400">Bitrate: <span class="text-gray-900 dark:text-gray-100">{{ "%.2f"|format(original_metadata.bitrate) }} Mbps</span></p>
                 </div>
             </div>
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Compressed Video</h3>
-                <div class="space-y-2">
-                    <p class="text-gray-600">Resolution: <span class="text-gray-900">{{ compressed_metadata.width }}x{{ compressed_metadata.height }}</span></p>
-                    <p class="text-gray-600">Duration: <span class="text-gray-900">{{ "%.2f"|format(compressed_metadata.duration) }}s</span></p>
-                    <p class="text-gray-600">Size: <span class="text-gray-900">{{ "%.2f"|format(compressed_metadata.size_mb) }} MB</span></p>
-                    <p class="text-gray-600">Codec: <span class="text-gray-900">{{ compressed_metadata.codec }}</span></p>
-                    <p class="text-gray-600">Bitrate: <span class="text-gray-900">{{ "%.2f"|format(compressed_metadata.bitrate) }} Mbps</span></p>
+
+            
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-purple-500 to-purple-600 p-4">
+                    <h3 class="text-lg font-semibold text-white">Compressed Video</h3>
+                </div>
+                <div class="p-6 space-y-3">
+                    <p class="text-gray-600 dark:text-gray-400">Resolution: <span class="text-gray-900 dark:text-gray-100">{{ compressed_metadata.width }}x{{ compressed_metadata.height }}</span></p>
+                    <p class="text-gray-600 dark:text-gray-400">Duration: <span class="text-gray-900 dark:text-gray-100">{{ "%.2f"|format(compressed_metadata.duration) }}s</span></p>
+                    <p class="text-gray-600 dark:text-gray-400">Size: <span class="text-gray-900 dark:text-gray-100">{{ "%.2f"|format(compressed_metadata.size_mb) }} MB</span></p>
+                    <p class="text-gray-600 dark:text-gray-400">Codec: <span class="text-gray-900 dark:text-gray-100">{{ compressed_metadata.codec }}</span></p>
+                    <p class="text-gray-600 dark:text-gray-400">Bitrate: <span class="text-gray-900 dark:text-gray-100">{{ "%.2f"|format(compressed_metadata.bitrate) }} Mbps</span></p>
                 </div>
             </div>
         </div>
+
+        
         {% if download_filename %}
-        <div class="text-center">
+        <div class="text-center mb-12">
             <a href="{{ url_for('download_file', filename=download_filename) }}" 
-               class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+               class="inline-flex items-center px-8 py-4 rounded-lg text-lg font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:ring-4 focus:ring-purple-500/50 transform transition-all hover:-translate-y-0.5">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
                 Download Compressed Video
             </a>
         </div>
         {% endif %}
         {% endif %}
 
+        
         <div id="progressContainer" class="hidden space-y-4 mb-8">
-            <div class="w-full bg-gray-200 rounded-full h-2.5">
-                <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            <div class="relative pt-1">
+                <div class="overflow-hidden h-3 bg-gray-200 dark:bg-gray-700 rounded-full">
+                    <div id="progressBar" 
+                         class="w-0 h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300 shadow-lg">
+                    </div>
+                </div>
+                <div id="progressText" class="text-center mt-2 text-sm text-gray-600 dark:text-gray-400"></div>
             </div>
-            <div id="progressText" class="text-center text-sm text-gray-600">0%</div>
-            <div id="ffmpegOutput" class="font-mono text-xs text-gray-500 bg-gray-50 p-2 rounded"></div>
+            <div id="ffmpegOutput" class="font-mono text-xs bg-gray-100 dark:bg-gray-800/50 p-4 rounded-lg max-h-32 overflow-auto"></div>
         </div>
 
-        <form method="POST" enctype="multipart/form-data" id="uploadForm" class="space-y-6">
-            <div id="dragDropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors duration-200 hover:border-indigo-500">
+        
+        <form method="POST" enctype="multipart/form-data" id="uploadForm" class="space-y-8">
+            <div id="dragDropZone" 
+                 class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-12 text-center transition-all duration-200 hover:border-purple-500 dark:hover:border-purple-400 group">
                 <div class="space-y-2">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 group-hover:text-purple-500 dark:text-gray-500 dark:group-hover:text-purple-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                         <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
-                    <div class="text-gray-600">Drag & drop video file here or</div>
+                    <div class="text-gray-600 dark:text-gray-400">Drag & drop video file here or</div>
                     <input type="file" id="video" name="video" accept="video/*" required
-                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-gray-700 dark:file:text-gray-300 dark:hover:file:bg-gray-600">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-2">
-                    <label class="block text-sm font-medium text-gray-700">Output Format</label>
-                    <select name="output_format" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Output Format</label>
+                    <select name="output_format" 
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 
+                            bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                            focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
                         <option value="mp4">MP4</option>
                         <option value="avi">AVI</option>
                         <option value="mkv">MKV</option>
@@ -91,8 +140,11 @@
                 </div>
 
                 <div class="space-y-2">
-                    <label class="block text-sm font-medium text-gray-700">Resolution</label>
-                    <select name="resolution" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Resolution</label>
+                    <select name="resolution" 
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 
+                            bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                            focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
                         <option value="">Original Resolution</option>
                         <option value="4K">4K (3840x2160)</option>
                         <option value="1440p">1440p (2560x1440)</option>
@@ -105,22 +157,25 @@
             </div>
 
             <div class="space-y-4">
-                <label class="block text-sm font-medium text-gray-700">Compression Mode</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Compression Mode</label>
                 <div class="flex space-x-4">
                     <label class="inline-flex items-center">
-                        <input type="radio" name="mode" value="quality" checked class="form-radio text-indigo-600">
+                        <input type="radio" name="mode" value="quality" checked class="form-radio text-indigo-600 dark:text-indigo-400">
                         <span class="ml-2">Quality-based</span>
                     </label>
                     <label class="inline-flex items-center">
-                        <input type="radio" name="mode" value="size" class="form-radio text-indigo-600">
+                        <input type="radio" name="mode" value="size" class="form-radio text-indigo-600 dark:text-indigo-400">
                         <span class="ml-2">Size-based</span>
                     </label>
                 </div>
             </div>
 
             <div id="quality-options" class="space-y-2">
-                <label class="block text-sm font-medium text-gray-700">Quality</label>
-                <select name="quality" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quality</label>
+                <select name="quality" 
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 
+                        bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                        focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
                     <option value="high">High</option>
                     <option value="medium" selected>Medium</option>
                     <option value="low">Low</option>
@@ -128,9 +183,11 @@
             </div>
 
             <div id="size-options" class="hidden space-y-2">
-                <label class="block text-sm font-medium text-gray-700">Target Size (MB)</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Target Size (MB)</label>
                 <input type="number" name="target_size" min="1" step="0.1"
-                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 
+                       bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                       rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
             </div>
 
             <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
@@ -140,6 +197,18 @@
     </div>
 
     <script>
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
         const originalTitle = document.title;
 
         document.querySelectorAll('input[name="mode"]').forEach(radio => {
