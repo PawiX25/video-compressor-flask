@@ -64,6 +64,11 @@ def get_video(filename):
     else:
         return "File not found", 404
 
+@app.route('/cancel', methods=['POST'])
+def cancel_compression():
+    compressor.cancel_compression()
+    return jsonify({'status': 'cancelled'})
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     cleanup_old_files()
@@ -125,7 +130,7 @@ def index():
                                     input_filename=base_filename,
                                     download_filename=f'compressed_{filename_without_ext}.{output_format}')
             
-            return render_template('index.html', error='Compression failed')
+            return render_template('index.html', error=compressor.error_message)
             
         except Exception as e:
             # Clean up input file only on error

@@ -130,6 +130,12 @@
                 <div id="progressText" class="text-center mt-2 text-sm text-gray-600 dark:text-gray-400"></div>
             </div>
             <div id="ffmpegOutput" class="font-mono text-xs bg-gray-100 dark:bg-gray-800/50 p-4 rounded-lg max-h-32 overflow-auto"></div>
+            <div class="text-center">
+                <button id="cancelButton" 
+                        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                    Cancel Compression
+                </button>
+            </div>
         </div>
 
         
@@ -297,6 +303,20 @@
                     alert('Error: ' + error);
                 });
             };
+
+            document.getElementById('cancelButton').addEventListener('click', function() {
+                if (confirm('Are you sure you want to cancel the compression?')) {
+                    fetch('/cancel', { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'cancelled') {
+                                clearInterval(progressInterval);
+                                document.getElementById('progressText').textContent = 'Cancelled';
+                                document.title = originalTitle;
+                            }
+                        });
+                }
+            });
         }
 
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -337,16 +357,24 @@
                     const progressBar = document.getElementById('progressBar');
                     const progressText = document.getElementById('progressText');
                     const ffmpegOutput = document.getElementById('ffmpegOutput');
+                    const cancelButton = document.getElementById('cancelButton');
                     
                     progressBar.style.width = data.progress + '%';
                     progressText.textContent = data.progress + '%';
                     ffmpegOutput.textContent = data.current_line;
+                    
+                    cancelButton.style.display = data.processing ? 'inline-block' : 'none';
                     
                     document.title = data.processing ? 
                         `(${data.progress}%) Video Compressor` : originalTitle;
                     
                     if (!data.processing && data.progress === 100) {
                         clearInterval(progressInterval);
+                    }
+
+                    if (data.error === 'Compression cancelled') {
+                        clearInterval(progressInterval);
+                        progressText.textContent = 'Cancelled';
                     }
                 });
         }

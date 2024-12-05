@@ -25,11 +25,28 @@ class VideoCompressor:
             '480p': '854x480',
             '360p': '640x360'
         }
+        self.process = None
+        self.cancelled = False
     
     def get_video_size_mb(self, filepath):
         return os.path.getsize(filepath) / (1024 * 1024)
     
+    def cancel_compression(self):
+        self.cancelled = True
+        if self.process:
+            try:
+                self.process.stderr.close()
+                self.process.stdout.close()
+                self.process.terminate()
+            except:
+                pass
+        self.processing = False
+        self.progress = 0
+        self.current_line = ""
+        self.error_message = "Compression cancelled"
+
     def _do_compress(self, input_path, output_path, crf, output_format='mp4', resolution=None):
+        self.cancelled = False
         try:
             probe = ffmpeg.probe(input_path)
             duration = float(probe['format']['duration'])
@@ -51,26 +68,44 @@ class VideoCompressor:
                 
             cmd = stream.compile()
 
-            process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+            self.process = Popen(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+            process_ref = self.process
 
             def read_output():
-                while process.poll() is None:
-                    line = process.stderr.readline()
-                    if line:
-                        self.current_line = line.strip()
-                        time_match = re.search(r"time=(\d{2}):(\d{2}):(\d{2})\.", line)
-                        if time_match:
-                            hours, minutes, seconds = map(int, time_match.groups())
-                            current_time = hours * 3600 + minutes * 60 + seconds
-                            self.progress = min(99, int(current_time / float(duration) * 100))
-                            
+                while process_ref and process_ref.poll() is None and not self.cancelled:
+                    try:
+                        line = process_ref.stderr.readline()
+                        if line:
+                            self.current_line = line.strip()
+                            time_match = re.search(r"time=(\d{2}):(\d{2}):(\d{2})\.", line)
+                            if time_match:
+                                hours, minutes, seconds = map(int, time_match.groups())
+                                current_time = hours * 3600 + minutes * 60 + seconds
+                                self.progress = min(99, int(current_time / float(duration) * 100))
+                    except:
+                        break
+
             thread = threading.Thread(target=read_output)
             thread.daemon = True
             thread.start()
 
-            process.wait()
+            self.process.wait()
             
-            if process.returncode == 0:
+            if self.cancelled:
+                try:
+                    if self.process:
+                        self.process.stderr.close()
+                        self.process.stdout.close()
+                        self.process.wait()
+                    if os.path.exists(output_path):
+                        time.sleep(0.5)
+                        os.remove(output_path)
+                except:
+                    pass
+                self.error_message = "Compression cancelled"
+                return False
+
+            if self.process.returncode == 0:
                 self.progress = 100
                 self.processing = False
                 return True
@@ -81,8 +116,18 @@ class VideoCompressor:
         except (ffmpeg.Error, ValueError) as e:
             self.processing = False
             return False
+        finally:
+            if self.process:
+                try:
+                    self.process.stderr.close()
+                    self.process.stdout.close()
+                except:
+                    pass
+            self.process = None
     
     def compress_video(self, input_path, output_path, quality='medium', target_size_mb=None, output_format='mp4', resolution_preset=None):
+        self.error_message = ""
+        
         if resolution_preset and resolution_preset not in self.resolution_presets:
             self.error_message = "Invalid resolution preset"
             return False
@@ -107,10 +152,15 @@ class VideoCompressor:
             
         try:
             if target_size_mb is not None:
-                return self.compress_to_target_size(input_path, output_path, target_size_mb, output_format, resolution)
+                success = self.compress_to_target_size(input_path, output_path, target_size_mb, output_format, resolution)
             else:
                 crf = self.quality_presets[quality]
-                return self._do_compress(input_path, output_path, crf, output_format, resolution)
+                success = self._do_compress(input_path, output_path, crf, output_format, resolution)
+            
+            if not success and not self.error_message:
+                self.error_message = "Compression failed"
+            return success
+                
         except Exception as e:
             self.error_message = str(e)
             return False
@@ -121,7 +171,11 @@ class VideoCompressor:
                 compressed_size = self.get_video_size_mb(output_path)
                 if compressed_size <= target_size_mb:
                     return True
-                os.remove(output_path)
+                time.sleep(0.5)
+                try:
+                    os.remove(output_path)
+                except:
+                    pass
         return False
 
     def get_video_metadata(self, filepath):
