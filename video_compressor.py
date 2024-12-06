@@ -12,6 +12,19 @@ class VideoCompressor:
             'medium': 28,
             'low': 33
         }
+        self.bitrate_presets = {
+            '4K': '45M',
+            '1440p': '25M',
+            '1080p': '8M',
+            '720p': '5M',
+            '480p': '2.5M',
+            '360p': '1M'
+        }
+        self.audio_presets = {
+            'high': {'codec': 'aac', 'bitrate': '192k'},
+            'medium': {'codec': 'aac', 'bitrate': '128k'},
+            'low': {'codec': 'aac', 'bitrate': '96k'}
+        }
         self.supported_formats = ['mp4', 'avi', 'mkv', 'mov', 'webm']
         self.progress = 0
         self.processing = False
@@ -27,6 +40,9 @@ class VideoCompressor:
         }
         self.process = None
         self.cancelled = False
+        self.encoding_speed = 0
+        self.estimated_time = 0
+        self.start_time = 0
     
     def get_video_size_mb(self, filepath):
         return os.path.getsize(filepath) / (1024 * 1024)
@@ -45,8 +61,36 @@ class VideoCompressor:
         self.current_line = ""
         self.error_message = "Compression cancelled"
 
+    def estimate_compression_time(self, input_path, resolution=None, quality='medium'):
+        try:
+            probe = ffmpeg.probe(input_path)
+            duration = float(probe['format']['duration'])
+            video_info = next(s for s in probe['streams'] if s['codec_type'] == 'video')
+            
+            resolution_factor = 1.0
+            if resolution:
+                target_width = int(resolution.split('x')[0])
+                source_width = int(video_info.get('width', 0))
+                resolution_factor = (target_width / source_width) ** 2
+
+            quality_factor = {
+                'high': 1.5,
+                'medium': 1.0,
+                'low': 0.7
+            }.get(quality, 1.0)
+
+            base_processing_rate = 0.5 
+            estimated_seconds = duration * base_processing_rate * resolution_factor * quality_factor
+            
+            return estimated_seconds
+        except Exception:
+            return 0
+
     def _do_compress(self, input_path, output_path, crf, output_format='mp4', resolution=None):
         self.cancelled = False
+        self.start_time = time.time()
+        self.estimated_time = self.estimate_compression_time(input_path, resolution)
+        
         try:
             probe = ffmpeg.probe(input_path)
             duration = float(probe['format']['duration'])
@@ -58,12 +102,27 @@ class VideoCompressor:
             if resolution:
                 width, height = map(int, resolution.split('x'))
                 stream = stream.filter('scale', width, height)
-                
+
+            bitrate = None
+            for res, br in self.bitrate_presets.items():
+                if resolution and resolution.startswith(res):
+                    bitrate = br
+                    break
+
+            audio_preset = self.audio_presets['medium']
+            
+            output_args = {
+                'vcodec': 'libx264' if output_format != 'webm' else 'libvpx-vp9',
+                'crf': crf,
+                'acodec': audio_preset['codec'],
+                'audio_bitrate': audio_preset['bitrate']
+            }
+
+            if bitrate:
+                output_args['video_bitrate'] = bitrate
+
             stream = (stream
-                .output(output_path, 
-                       vcodec='libx264' if output_format != 'webm' else 'libvpx-vp9',
-                       crf=crf, 
-                       acodec='aac' if output_format != 'webm' else 'libvorbis')
+                .output(output_path, **output_args)
                 .overwrite_output())
                 
             cmd = stream.compile()
@@ -77,11 +136,19 @@ class VideoCompressor:
                         line = process_ref.stderr.readline()
                         if line:
                             self.current_line = line.strip()
+                            speed_match = re.search(r"speed=\s*([\d.]+)x", line)
+                            if speed_match:
+                                self.encoding_speed = float(speed_match.group(1))
+                            
                             time_match = re.search(r"time=(\d{2}):(\d{2}):(\d{2})\.", line)
                             if time_match:
                                 hours, minutes, seconds = map(int, time_match.groups())
                                 current_time = hours * 3600 + minutes * 60 + seconds
                                 self.progress = min(99, int(current_time / float(duration) * 100))
+                                
+                                if self.progress > 0:
+                                    elapsed_time = time.time() - self.start_time
+                                    self.estimated_time = (elapsed_time / self.progress) * (100 - self.progress)
                     except:
                         break
 
@@ -195,9 +262,13 @@ class VideoCompressor:
             return None
 
     def get_progress(self):
-        return {
+        base_info = {
             'progress': self.progress,
             'processing': self.processing,
             'current_line': self.current_line,
-            'error': self.error_message
+            'error': self.error_message,
+            'encoding_speed': self.encoding_speed,
+            'estimated_time': self.estimated_time,
+            'elapsed_time': time.time() - self.start_time if self.start_time else 0
         }
+        return base_info

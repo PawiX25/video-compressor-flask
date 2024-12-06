@@ -127,7 +127,11 @@
                          class="w-0 h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300 shadow-lg">
                     </div>
                 </div>
-                <div id="progressText" class="text-center mt-2 text-sm text-gray-600 dark:text-gray-400"></div>
+                <div class="text-center mt-2 space-y-1">
+                    <div id="progressText" class="text-sm text-gray-600 dark:text-gray-400"></div>
+                    <div id="encodingSpeed" class="text-sm text-gray-500 dark:text-gray-500"></div>
+                    <div id="timeEstimates" class="text-sm text-gray-500 dark:text-gray-500"></div>
+                </div>
             </div>
             <div id="ffmpegOutput" class="font-mono text-xs bg-gray-100 dark:bg-gray-800/50 p-4 rounded-lg max-h-32 overflow-auto"></div>
             <div class="text-center">
@@ -350,17 +354,39 @@
             }
         }
 
+        function formatTime(seconds) {
+            if (!seconds) return '-- --';
+            seconds = Math.round(seconds);
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
         function updateProgress() {
             fetch('/progress')
                 .then(response => response.json())
                 .then(data => {
                     const progressBar = document.getElementById('progressBar');
                     const progressText = document.getElementById('progressText');
+                    const encodingSpeed = document.getElementById('encodingSpeed');
+                    const timeEstimates = document.getElementById('timeEstimates');
                     const ffmpegOutput = document.getElementById('ffmpegOutput');
                     const cancelButton = document.getElementById('cancelButton');
                     
                     progressBar.style.width = data.progress + '%';
-                    progressText.textContent = data.progress + '%';
+                    progressText.textContent = `Progress: ${data.progress}%`;
+                    
+                    if (data.encoding_speed > 0) {
+                        encodingSpeed.textContent = `Encoding Speed: ${data.encoding_speed.toFixed(1)}x`;
+                    }
+
+                    if (data.processing) {
+                        const elapsed = formatTime(data.elapsed_time);
+                        const estimated = formatTime(data.estimated_time);
+                        timeEstimates.textContent = `Elapsed: ${elapsed} | Estimated Remaining: ${estimated}`;
+                    }
+                    
                     ffmpegOutput.textContent = data.current_line;
                     
                     cancelButton.style.display = data.processing ? 'inline-block' : 'none';
@@ -375,6 +401,8 @@
                     if (data.error === 'Compression cancelled') {
                         clearInterval(progressInterval);
                         progressText.textContent = 'Cancelled';
+                        encodingSpeed.textContent = '';
+                        timeEstimates.textContent = '';
                     }
                 });
         }
